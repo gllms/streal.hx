@@ -2,6 +2,8 @@
 
 A [Helix](https://github.com/helix-editor/helix/) plugin to bookmark files and quickly switch between them using numbers. Every working directory has its own distinct list. Heavily inspired by [otavioschwanck/arrow.nvim](https://github.com/otavioschwanck/arrow.nvim).
 
+Feedback and ideas are very much welcome, feel free to [create a new issue](https://github.com/gllms/streal.hx/issues) and share your thoughts.
+
 > [!WARNING]  
 > Critical bugs and breaking changes may occur at any time, especially while this plugin is pre 1.0. Use at your own risk.
 
@@ -11,16 +13,16 @@ A [Helix](https://github.com/helix-editor/helix/) plugin to bookmark files and q
 
 First, open the streal popup by using the `:streal-open` typable command or a hotkey you bound to it (see [Installation](#installation)), for example <kbd>\\</kbd>. This will show the list of files for the current working directory. Now you can use any of the following hotkeys to interact with it:
 
-| Key                          | Description                            |
-| ---------------------------- | -------------------------------------- |
-| <kbd>s</kbd>                 | Add / remove current file              |
-| <kbd>1</kbd>..<kbd>9</kbd>   | Open file                              |
-| <kbd>Esc</kbd>, <kbd>q</kbd> | Close popup                            |
-| <kbd>C</kbd>                 | Clear list                             |
-| <kbd>h</kbd>                 | Open in horizontal split               |
-| <kbd>v</kbd>                 | Open in vertical split                 |
-| <kbd>d</kbd>                 | Delete mode                            |
-| <kbd>e</kbd>                 | Edit current Streal file               |
+| Key                          | Description               |
+| ---------------------------- | ------------------------- |
+| <kbd>s</kbd>                 | Add / remove current file |
+| <kbd>1</kbd>..<kbd>9</kbd>   | Open file                 |
+| <kbd>Esc</kbd>, <kbd>q</kbd> | Close popup               |
+| <kbd>C</kbd>                 | Clear list                |
+| <kbd>h</kbd>                 | Open in horizontal split  |
+| <kbd>v</kbd>                 | Open in vertical split    |
+| <kbd>d</kbd>                 | Delete mode               |
+| <kbd>e</kbd>                 | Edit current Streal file  |
 
 In delete mode, activated by pressing <kbd>d</kbd>, any number you press will remove that file from the list. The popup will stay open, so you can easily remove multiple files this way.
 
@@ -45,5 +47,8 @@ You can quickly edit the list by pressing <kbd>e</kbd>. This will open the Strea
 
    ```toml
    [keys.normal]
+   "\\" = ":streal-open"
+
+   [keys.select]
    "\\" = ":streal-open"
    ```
