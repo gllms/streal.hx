@@ -5,6 +5,16 @@
 
 (struct StrealState (paths mode) #:mutable)
 
+(define keymap-help '("s"      "Add / remove current file"
+                      "1..9"   "Open file"
+                      "Esc, q" "Close popup"
+                      "C"      "Clear list"
+                      "h"      "Open in horizontal split"
+                      "v"      "Open in vertical split"
+                      "d"      "Delete mode"
+                      "e"      "Edit current Streal file"
+                      "?"      "Show keymap"))
+
 (define chars-to-encode (list #\% #\space #\\ #\/ #\: #\* #\? #\" #\< #\> #\|))
 
 (define (editor-focus-path) (editor-document->path (editor->doc-id (editor-focus))))
@@ -70,16 +80,22 @@
 
 (define (remove-path paths path) (write-paths (filter (lambda (x) (not (string=? path x))) paths)))
 
-(define (calculate-popup-area rect paths)
+(define (calculate-popup-area rect paths mode)
   (let* ([rect-width (area-width rect)]
          [rect-height (area-height rect)]
-         [width (min (+ (if (> (length paths) 0)
-                            (max (apply max (map (lambda (x) (string-length x)) paths))
-                                 8)
-                            9)
-                        6)
+         [width (min (if (eqv? mode 'help)
+                         (+ (apply max (map string-length keymap-help))
+                            11)
+                         (+ (if (> (length paths) 0)
+                                (max (apply max (map (lambda (x) (string-length x)) paths))
+                                     8)
+                                9)
+                            6))
                      (- rect-width 4))]
-         [height (min (+ (max (length paths) 1) 2) (- rect-height 4))]
+         [height (min (if (eqv? mode 'help)
+                          (+ (/ (length keymap-help) 2) 2)
+                          (+ (max (length paths) 1) 2))
+                      (- rect-height 4))]
          [x (ceiling (max 0 (- (ceiling (/ rect-width 2)) (floor (/ width 2)))))]
          [y (ceiling (max 0 (- (ceiling (/ rect-height 2)) (floor (/ height 2)))))])
     (area (- x 1) (- y 1) width height)))
@@ -129,7 +145,7 @@
   (let* ([mode (StrealState-mode state)]
          [paths (StrealState-paths state)]
          [shortened-paths (shorten-paths paths)]
-         [streal-area (calculate-popup-area area shortened-paths)]
+         [streal-area (calculate-popup-area area shortened-paths mode)]
          [text-area (calculate-text-area streal-area)]
          [popup-style (theme-scope "ui.popup")]
          [active-style (theme-scope "ui.text.focus")]
@@ -140,21 +156,28 @@
       (make-block popup-style (style) "all" "plain"))
     (if (not (eqv? mode 'normal))
       (frame-set-string! buf (+ (area-x streal-area) 2) (area-y streal-area) (symbol->string mode) active-style))
-    (if (= (length paths) 0)
-      (frame-set-string! buf (area-x text-area) (area-y text-area) "  (empty)" popup-style))
-    (for-each (lambda (i)
-      (let* ([path (list-ref paths i)]
-             [shortened-path (list-ref shortened-paths i)]
-             [current-style (cond
-                              [(eqv? mode 'delete)
-                                delete-style]
-                              [(string=? (trim-current-directory (editor-focus-path)) (trim-current-directory path))
-                                active-style]
-                              [else
-                                popup-style])])
-         (frame-set-string! buf (area-x text-area) (+ (area-y text-area) i) (number->string (+ i 1)) number-style)
-         (frame-set-string! buf (+ (area-x text-area) 2) (+ (area-y text-area) i) shortened-path current-style)))
-    (range (length paths)))))
+    (if (eqv? mode 'help)
+        (for-each (lambda (i)
+                    (let ([key (list-ref keymap-help (* i 2))] [description (list-ref keymap-help (+ (* i 2) 1))])
+                      (frame-set-string! buf (area-x text-area) (+ (area-y text-area) i) key number-style)
+                      (frame-set-string! buf (+ (area-x text-area) 7) (+ (area-y text-area) i) description popup-style)))
+                  (range (/ (length keymap-help) 2)))
+        (begin
+          (if (= (length paths) 0)
+              (frame-set-string! buf (area-x text-area) (area-y text-area) "  (empty)" popup-style))
+          (for-each (lambda (i)
+                      (let* ([path (list-ref paths i)]
+                             [shortened-path (list-ref shortened-paths i)]
+                             [current-style (cond
+                                              [(eqv? mode 'delete)
+                                                delete-style]
+                                              [(string=? (trim-current-directory (editor-focus-path)) (trim-current-directory path))
+                                                active-style]
+                                              [else
+                                                popup-style])])
+                        (frame-set-string! buf (area-x text-area) (+ (area-y text-area) i) (number->string (+ i 1)) number-style)
+                        (frame-set-string! buf (+ (area-x text-area) 2) (+ (area-y text-area) i) shortened-path current-style)))
+                    (range (length paths)))))))
 
 (define (handle-event state event)
   (let* ([mode (StrealState-mode state)]
@@ -204,6 +227,9 @@
         event-result/consume]
       [(eqv? char #\v)
         (toggle-mode state 'vertical)
+        event-result/consume]
+      [(eqv? char #\?)
+        (toggle-mode state 'help)
         event-result/consume]
       [(eqv? char #\:)
         event-result/ignore]

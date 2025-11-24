@@ -23,6 +23,7 @@ First, open the streal popup by using the `:streal-open` typable command or a ho
 | <kbd>v</kbd>                 | Open in vertical split    |
 | <kbd>d</kbd>                 | Delete mode               |
 | <kbd>e</kbd>                 | Edit current Streal file  |
+| <kbd>?</kbd>                 | Show keymap               |
 
 In delete mode, activated by pressing <kbd>d</kbd>, any number you press will remove that file from the list. The popup will stay open, so you can easily remove multiple files this way.
 
