@@ -70,7 +70,7 @@
 
 (define (remove-path paths path) (write-paths (filter (lambda (x) (not (string=? path x))) paths)))
 
-(define (calculate-area rect paths padding)
+(define (calculate-popup-area rect paths)
   (let* ([rect-width (area-width rect)]
          [rect-height (area-height rect)]
          [width (min (+ (if (> (length paths) 0)
@@ -82,7 +82,14 @@
          [height (min (+ (max (length paths) 1) 2) (- rect-height 4))]
          [x (ceiling (max 0 (- (ceiling (/ rect-width 2)) (floor (/ width 2)))))]
          [y (ceiling (max 0 (- (ceiling (/ rect-height 2)) (floor (/ height 2)))))])
-    (area (- x (* padding 2)) (- y padding) width height)))
+    (area (- x 1) (- y 1) width height)))
+
+(define (calculate-text-area popup-area)
+  (let ([padding-x 2] [padding-y 1])
+    (area (+ (area-x popup-area) padding-x)
+          (+ (area-y popup-area) padding-y)
+          (- (area-width popup-area) (* padding-x 2))
+          (- (area-height popup-area) (* padding-y 2)))))
 
 (define (shorten-paths paths)
   (let ([split-paths (map (lambda (x) (reverse (split-many x (path-separator)))) paths)])
@@ -122,8 +129,8 @@
   (let* ([mode (StrealState-mode state)]
          [paths (StrealState-paths state)]
          [shortened-paths (shorten-paths paths)]
-         [streal-area (calculate-area area shortened-paths 1)]
-         [text-area (calculate-area area shortened-paths 0)]
+         [streal-area (calculate-popup-area area shortened-paths)]
+         [text-area (calculate-text-area streal-area)]
          [popup-style (theme-scope "ui.popup")]
          [active-style (theme-scope "ui.text.focus")]
          [number-style (theme-scope "markup.list")]
