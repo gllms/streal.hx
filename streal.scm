@@ -9,7 +9,10 @@
 
 (define (editor-focus-path) (editor-document->path (editor->doc-id (editor-focus))))
 
-(define (trim-current-directory path) (trim-start-matches (or path "") (string-append (current-directory) (path-separator))))
+(define (trim-current-directory path)
+  (~> (or path "")
+      (trim-start-matches (string-append (current-directory) (path-separator)))
+      (trim-start-matches (string-append "." (path-separator)))))
 
 (define (toggle-mode state mode) (set-StrealState-mode! state (if (eqv? (StrealState-mode state) mode) 'normal mode)))
 
