@@ -214,7 +214,7 @@
               (helix.echo "No path to save")
               event-result/consume))]
       [(eqv? char #\e)
-        (helix.open (construct-path))
+        (switch-or-open (construct-path) mode)
         event-result/close]
       [(eqv? char #\C)
         (write-paths (list))
