@@ -74,10 +74,11 @@
   (let* ([rect-width (area-width rect)]
          [rect-height (area-height rect)]
          [width (min (+ (if (> (length paths) 0)
-                            (apply max (map (lambda (x) (string-length x)) paths))
+                            (max (apply max (map (lambda (x) (string-length x)) paths))
+                                 8)
                             9)
                         6)
-                      (- rect-width 4))]
+                     (- rect-width 4))]
          [height (min (+ (max (length paths) 1) 2) (- rect-height 4))]
          [x (ceiling (max 0 (- (ceiling (/ rect-width 2)) (floor (/ width 2)))))]
          [y (ceiling (max 0 (- (ceiling (/ rect-height 2)) (floor (/ height 2)))))])
