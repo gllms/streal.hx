@@ -206,31 +206,41 @@
     (cond
       [(key-event-escape? event) event-result/close]
       [(eqv? char #\q) event-result/close]
-      [(and (not (eqv? num #false)) (>= num 1) (<= num (length paths)))
-       (let ([selected-path (list-ref paths (- num 1))])
-         (if (eqv? mode 'delete)
-             (begin
-               (remove-path paths selected-path)
-               (set-StrealState-paths! state (get-paths))
-               event-result/consume)
-             (begin
-               (switch-or-open selected-path mode)
-               event-result/close)))]
+      [(not (eqv? num #false))
+       (if (and (>= num 1) (<= num (length paths)))
+           (let ([selected-path (list-ref paths (- num 1))])
+             (if (eqv? mode 'delete)
+                 (begin
+                   (remove-path paths selected-path)
+                   (set-StrealState-paths! state (get-paths))
+                   (helix.echo (string-append "'" selected-path "' removed from Streal file."))
+                   event-result/consume)
+                 (begin
+                   (switch-or-open selected-path mode)
+                   event-result/close)))
+           (begin
+             (set-error! (string-append "No path in streal file on line " (number->string num) "."))
+             event-result/consume))]
       [(eqv? char #\s)
-       (if current-path
+       (if (string=? current-path "")
+           (begin
+             (set-error! "Can't add to Streal file with no path set.")
+             event-result/consume)
            (begin
              (if (member current-path paths)
-                 (remove-path paths current-path)
-                 (write-paths (append paths (list current-path))))
-             event-result/close)
-           (begin
-             (helix.echo "No path to save")
-             event-result/consume))]
+                 (begin
+                   (remove-path paths current-path)
+                   (helix.echo (string-append "'" current-path "' removed from Streal file.")))
+                 (begin
+                   (write-paths (append paths (list current-path)))
+                   (helix.echo (string-append "'" current-path "' added to Streal file."))))
+             event-result/close))]
       [(eqv? char #\e)
        (switch-or-open (get-streal-file-path) mode)
        event-result/close]
       [(eqv? char #\C)
        (write-paths '())
+       (helix.echo "Streal file cleared.")
        event-result/close]
       [(eqv? char #\d)
        (toggle-mode state 'delete)
