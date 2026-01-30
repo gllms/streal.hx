@@ -217,7 +217,7 @@
                   (begin
                     (remove-path paths selected-path)
                     (set-StrealState-paths! state (get-paths))
-                    (helix.echo (string-append "'" selected-path "' removed from Streal file."))
+                    (set-status! (string-append "'" selected-path "' removed from Streal file."))
                     event-result/consume)
                   (begin
                     (switch-or-open selected-path mode)
@@ -230,17 +230,17 @@
               (if (member current-path paths)
                   (begin
                     (remove-path paths current-path)
-                    (helix.echo (string-append "'" current-path "' removed from Streal file.")))
+                    (set-status! (string-append "'" current-path "' removed from Streal file.")))
                   (begin
                     (write-paths (append paths (list current-path)))
-                    (helix.echo (string-append "'" current-path "' added to Streal file."))))
+                    (set-status! (string-append "'" current-path "' added to Streal file."))))
               event-result/close))]
        [(eqv? char #\e)
         (switch-or-open (get-streal-file-path) mode)
         event-result/close]
        [(eqv? char #\C)
         (write-paths '())
-        (helix.echo "Streal file cleared.")
+        (set-status! "Streal file cleared.")
         event-result/close]
        [(eqv? char #\d)
         (toggle-mode state 'delete)
