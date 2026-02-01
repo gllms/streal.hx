@@ -102,7 +102,20 @@
     (unless (path-exists? (parent-name path))
       (create-directory! (parent-name path)))
     (unless (empty? paths)
-      (call-with-output-file path (lambda (in) (write-string contents in))))))
+      (call-with-output-file path (lambda (in) (write-string contents in))))
+    (delete-empty-directories)))
+
+(define (directory-empty? path) (= (length (read-dir path)) 0))
+
+(define (delete-empty-directories)
+  (let* ([slash (path-separator)]
+         [streal-path (string-append (canonicalize-path "~") slash ".streal")]
+         [branch-path (string-append streal-path slash "branch")])
+    (when (path-exists? branch-path)
+      (begin
+        (for-each delete-directory! (filter directory-empty? (read-dir branch-path)))
+        (when (directory-empty? branch-path)
+          (delete-directory! branch-path))))))
 
 (define (remove-path paths path branch)
   (write-paths (filter (lambda (x) (not (string=? path x))) paths) branch))
