@@ -261,7 +261,7 @@
                   (begin
                     (switch-or-open selected-path mode)
                     event-result/close)))
-            (error (string-append "No path in streal file on line " (number->string num) ".")))]
+            (error (string-append "No path at index " (number->string num) ".")))]
        [(eqv? char #\s)
         (if (string=? current-path "")
             (error "Can't add to Streal file with no path set.")
