@@ -3,7 +3,7 @@
 (require "helix/editor.scm")
 (require (prefix-in helix. "helix/commands.scm"))
 
-(struct StrealState (paths mode) #:mutable)
+(struct StrealState (paths mode branch) #:mutable)
 
 (define keymap-help
   '("s"      "Add / remove current file"
@@ -44,13 +44,38 @@
        (flatten)
        (apply string)))
 
-(define (get-streal-file-path)
-  (string-append (canonicalize-path "~")
-                 (path-separator)
-                 ".streal"
-                 (path-separator)
-                 (percent-encode (current-directory))
-                 ".txt"))
+(define (handle-error err)
+  (set-error! (string-append "'streal':" (error-object-message err))))
+
+(define (get-git-branch)
+  (begin
+    (define result
+      (~> (command "git" '("branch" "--show-current"))
+          with-stdout-piped
+          with-stderr-piped
+          spawn-process))
+    (cond
+      [(Ok? result)
+       (let ([handle (Ok->value result)])
+         (define stdout (read-port-to-string (child-stdout handle)))
+         (define stderr (read-port-to-string (child-stderr handle)))
+         (if (and (string=? stderr "") (not (string=? stdout "")))
+             (trim stdout)
+             #false))]
+      [(Err? result) (error (Err->value result))])))
+
+(define (get-streal-file-path branch)
+  (let* ([slash (path-separator)]
+         [branch-path (if branch
+                          (string-append "branch" slash (percent-encode branch) slash)
+                          "")])
+    (string-append (canonicalize-path "~")
+                   (path-separator)
+                   ".streal"
+                   (path-separator)
+                   branch-path
+                   (percent-encode (current-directory))
+                   ".txt")))
 
 (define (read-file-as-string name)
   (call-with-input-file name
@@ -58,8 +83,8 @@
                           (do ((x (read-char in) (read-char in)) (chars '() (cons x chars)))
                               ((eof-object? x) (list->string (reverse chars)))))))
 
-(define (get-paths)
-  (let ([path (get-streal-file-path)])
+(define (get-paths branch)
+  (let ([path (get-streal-file-path branch)])
     (if (is-file? path)
         (~>> path
              (read-file-as-string)
@@ -68,19 +93,19 @@
              (filter (lambda (x) (> (string-length x) 0))))
         '())))
 
-(define (write-paths paths)
-  (let ([path (get-streal-file-path)])
+(define (write-paths paths branch)
+  (let* ([path (get-streal-file-path branch)]
+         [contents (~> paths (string-join "\n") (string-append "\n"))]
+         [directory (parent-name path)])
     (when (is-file? path)
-      (delete-file! (get-streal-file-path)))
+      (delete-file! (get-streal-file-path branch)))
     (unless (path-exists? (parent-name path))
       (create-directory! (parent-name path)))
     (unless (empty? paths)
-      (call-with-output-file
-       path
-       (lambda (in) (~> paths (string-join "\n") (string-append "\n") (write-string in)))))))
+      (call-with-output-file path (lambda (in) (write-string contents in))))))
 
-(define (remove-path paths path)
-  (write-paths (filter (lambda (x) (not (string=? path x))) paths)))
+(define (remove-path paths path branch)
+  (write-paths (filter (lambda (x) (not (string=? path x))) paths) branch))
 
 (define (calculate-popup-area rect paths mode)
   (let* ([rect-width (area-width rect)]
@@ -200,12 +225,13 @@
 (define (handle-event state event)
   (let* ([mode (StrealState-mode state)]
          [paths (StrealState-paths state)]
+         [branch (StrealState-branch state)]
          [char (key-event-char event)]
          [num (char->number (or char #\null))]
          [current-path (trim-current-directory (editor-focus-path))])
     (with-handler
      (lambda (err)
-       (set-error! (error-object-message err))
+       (handle-error err)
        event-result/consume)
      (cond
        [(key-event-escape? event) event-result/close]
@@ -215,8 +241,8 @@
             (let ([selected-path (list-ref paths (- num 1))])
               (if (eqv? mode 'delete)
                   (begin
-                    (remove-path paths selected-path)
-                    (set-StrealState-paths! state (get-paths))
+                    (remove-path paths selected-path branch)
+                    (set-StrealState-paths! state (get-paths branch))
                     (set-status! (string-append "'" selected-path "' removed from Streal file."))
                     event-result/consume)
                   (begin
@@ -229,17 +255,17 @@
             (begin
               (if (member current-path paths)
                   (begin
-                    (remove-path paths current-path)
+                    (remove-path paths current-path branch)
                     (set-status! (string-append "'" current-path "' removed from Streal file.")))
                   (begin
-                    (write-paths (append paths (list current-path)))
+                    (write-paths (append paths (list current-path)) branch)
                     (set-status! (string-append "'" current-path "' added to Streal file."))))
               event-result/close))]
        [(eqv? char #\e)
-        (switch-or-open (get-streal-file-path) mode)
+        (switch-or-open (get-streal-file-path branch) mode)
         event-result/close]
        [(eqv? char #\C)
-        (write-paths '())
+        (write-paths '() branch)
         (set-status! "Streal file cleared.")
         event-result/close]
        [(eqv? char #\d)
@@ -259,10 +285,18 @@
 
 ;;@doc
 ;; Open the Streal popup
-(define (streal-open)
-  (push-component! (new-component! "streal"
-                                   (StrealState (get-paths) 'normal)
-                                   render-streal
-                                   (hash "handle_event" handle-event))))
+;; Flags:
+;;   --per-branch  Keep a separate Streal file per Git branch
+(define (streal-open [flag ""])
+  (with-handler handle-error
+                (if (and (not (string=? flag "")) (not (string=? flag "--per-branch")))
+                    (error (string-append "unknown flag '" flag "'"))
+                    (let ([branch (if (string=? flag "--per-branch")
+                                      (get-git-branch)
+                                      #false)])
+                      (push-component! (new-component! "streal"
+                                                       (StrealState (get-paths branch) 'normal branch)
+                                                       render-streal
+                                                       (hash "handle_event" handle-event)))))))
 
 (provide streal-open)

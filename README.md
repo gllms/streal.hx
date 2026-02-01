@@ -1,6 +1,6 @@
 # streal.hx
 
-A [Helix](https://github.com/helix-editor/helix/) plugin to bookmark files and quickly switch between them using numbers. Every working directory has its own distinct list. Heavily inspired by [otavioschwanck/arrow.nvim](https://github.com/otavioschwanck/arrow.nvim).
+A [Helix](https://github.com/helix-editor/helix/) plugin to bookmark files and quickly switch between them using numbers. Every working directory (and [optionally](#configuration) every Git branch) has its own distinct list. Heavily inspired by [otavioschwanck/arrow.nvim](https://github.com/otavioschwanck/arrow.nvim).
 
 Feedback and ideas are very much welcome, feel free to [create a new issue](https://github.com/gllms/streal.hx/issues) and share your thoughts.
 
@@ -53,3 +53,18 @@ You can quickly edit the list by pressing <kbd>e</kbd>. This will open the Strea
    [keys.select]
    "\\" = ":streal-open"
    ```
+
+## Configuration
+
+To configure the plugin you can append the following command flags to the `:streal-open` command:
+
+| Command flag   | Description                                                                                                                                                             |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--per-branch` | Keep a separate Streal file per Git branch. If no branch can be found, Streal will silently fall back to the default behaviour of using one file per working directory. |
+
+For example:
+
+```toml
+[keys.normal]
+"\\" = ":streal-open --per-branch"
+```
